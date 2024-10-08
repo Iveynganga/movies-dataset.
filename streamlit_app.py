@@ -1,73 +1,92 @@
+
+
 import streamlit as st
-import pandas as pd
-import numpy as np
 import requests
-import pickle
-import sklearn
-import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity
+import pandas as pd
 
-st.set_page_config(layout="wide")
-
-# Load your data
-movies_dict = pickle.load(open("movies_dict.pkl", "rb"))
-movies = pd.DataFrame(movies_dict)
-movies.drop_duplicates(inplace=True)
-
-# Load the pre-trained model and other required files
-with open('csr_data_tf.pkl', 'rb') as file:
-    csr_data = pickle.load(file)
-model = pickle.load(open("model.pkl", "rb"))
-
-# Load TMDb API key
+# Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
 
-# Function to fetch movie poster from TMDb
-def fetch_poster(movie_id):
-    url = f'https://api.themoviedb.org/3/movie/{movie_id}?api_key={API_KEY}'
-    response = requests.get(url)
-    data = response.json()
-    if 'poster_path' in data and data['poster_path']:
-        return "https://image.tmdb.org/t/p/w500/" + data['poster_path']
+# Function to fetch recent movies from TMDb API
+def fetch_recent_movies(api_key):
+    endpoint = "movie/now_playing"
+    base_url = "https://api.themoviedb.org/3"
+    
+    # Parameters for the API request
+    params = {
+        "api_key": api_key,
+        "language": "en-US",
+        "page": 1
+    }
+    
+    # API request URL
+    url = f"{base_url}/{endpoint}"
+    
+    # Make the request
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        return response.json().get('results', [])
     else:
-        return "https://via.placeholder.com/500x750.png?text=No+Image"
+        st.error(f"Failed to fetch data from API. Status code: {response.status_code}")
+        return []
 
-# Function to recommend movies based on similarity
-def recommend(movie_name):
-    n_movies_to_recommend = 5
-    idx = movies[movies['title'] == movie_name].index[0]
+# Function to compute the cosine similarity matrix
+def compute_cosine_similarity(movies):
+    features_for_similarity = pd.DataFrame(movies)[['vote_average', 'popularity', 'vote_count']] 
     
-    distances, indices = model.kneighbors(csr_data[idx], n_neighbors=n_movies_to_recommend + 1)
-    idx = list(indices.squeeze())
-    recommended_movies = movies.iloc[idx[1:]]  # Exclude the input movie
+    # Compute cosine similarity matrix based on features
+    cosine_sim_matrix = cosine_similarity(features_for_similarity)
     
-    movie_titles = recommended_movies['title'].values
-    movie_ids = recommended_movies['movie_id'].values
-    
-    posters = [fetch_poster(movie_id) for movie_id in movie_ids]
-    
-    return movie_titles, posters
+    return cosine_sim_matrix
 
-# Streamlit UI
+# Function to get movie recommendations based on cosine similarity
+def get_recommendations(title, movies, cosine_sim_matrix):
+    try:
+        # Get the index of the movie that matches the title
+        idx = [i for i, movie in enumerate(movies) if movie['title'] == title][0]
+        
+        # Get the pairwise similarity scores of all movies with that movie
+        sim_scores = list(enumerate(cosine_sim_matrix[idx]))
+        
+        # Sort the movies based on similarity scores
+        sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+        
+        # Get the indices of the top 10 most similar movies (excluding the first one)
+        movie_indices = [i[0] for i in sim_scores[1:11]]  # Top 10 similar movies
+        
+        # Return the top 10 most similar movies
+        similar_movies = [movies[i]['title'] for i in movie_indices]
+        return similar_movies
+    except IndexError:
+        st.error("Movie not found in the dataset!")
+        return []
+
+# Streamlit app interface
 st.title("Movie Recommender System")
 
-st.write("""
-Welcome to the Movie Recommender System! 
-Select a movie, and we'll recommend a few similar movies for you to enjoy.
-""")
+# Fetch movies using the API key
+movies = fetch_recent_movies(API_KEY)
 
-selected_movie = st.selectbox("Choose a movie", movies['title'].values)
-
-if st.button("Recommend Movies"):
-    movie_titles, posters = recommend(selected_movie)
+if movies:
+    # User input for movie title
+    selected_movie = st.text_input('Enter a movie title you like:')
     
-    st.write(f"### Movies similar to {selected_movie}:")
-    
-    cols = st.columns(5)
-    for i in range(5):
-        with cols[i]:
-            st.image(posters[i], width=150)
-            st.write(movie_titles[i])
-
-# About section
-st.sidebar.write("## About")
-st.sidebar.write("This is a Similarity-based Movie Recommender System built with Streamlit and The Movie Database (TMDb) API.")
+    # If user enters a movie title, find similar movies
+    if selected_movie:
+        # Compute cosine similarity matrix
+        cosine_sim_matrix = compute_cosine_similarity(movies)
+        
+        # Get movie recommendations based on the input
+        recommended_movies = get_recommendations(selected_movie, movies, cosine_sim_matrix)
+        
+        # Display the recommended movies
+        if recommended_movies:
+            st.write(f"Movies similar to '{selected_movie}':")
+            for movie in recommended_movies:
+                st.write(f"- {movie}")
+        else:
+            st.write("No recommendations found. Try another title.")
+else:
+    st.write("No recent movies found.")
