@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 import requests
 import pickle
-from sklearn.metrics.pairwise import cosine_similarity
+import sklearn
+import cosine_similarity
 
 st.set_page_config(layout="wide")
 
