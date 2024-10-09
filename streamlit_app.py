@@ -34,18 +34,22 @@ def fetch_recent_movies(api_key):
 
 # Function to compute the cosine similarity matrix
 def compute_cosine_similarity(movies):
-    features_for_similarity = pd.DataFrame(movies)[['vote_average', 'popularity', 'vote_count']] 
+    # Create a DataFrame with relevant features for similarity calculation
+    movie_df = pd.DataFrame(movies)
+    
+    # Use vote_average, popularity, and vote_count for similarity calculations
+    features_for_similarity = movie_df[['vote_average', 'popularity', 'vote_count']].fillna(0)
     
     # Compute cosine similarity matrix based on features
     cosine_sim_matrix = cosine_similarity(features_for_similarity)
     
-    return cosine_sim_matrix
+    return cosine_sim_matrix, movie_df
 
 # Function to get movie recommendations based on cosine similarity
-def get_recommendations(title, movies, cosine_sim_matrix):
+def get_recommendations(title, movie_df, cosine_sim_matrix):
     try:
         # Get the index of the movie that matches the title
-        idx = [i for i, movie in enumerate(movies) if movie['title'] == title][0]
+        idx = movie_df[movie_df['title'].str.lower() == title.lower()].index[0]
         
         # Get the pairwise similarity scores of all movies with that movie
         sim_scores = list(enumerate(cosine_sim_matrix[idx]))
@@ -57,36 +61,43 @@ def get_recommendations(title, movies, cosine_sim_matrix):
         movie_indices = [i[0] for i in sim_scores[1:11]]  # Top 10 similar movies
         
         # Return the top 10 most similar movies
-        similar_movies = [movies[i]['title'] for i in movie_indices]
+        similar_movies = movie_df.iloc[movie_indices][['title', 'release_date']].values.tolist()
         return similar_movies
     except IndexError:
-        st.error("Movie not found in the dataset!")
+        st.error("Movie not found in the recent movies dataset!")
         return []
 
 # Streamlit app interface
-st.title("Movie Recommender System")
+st.title("Recent Movie Recommender System")
 
-# Fetch movies using the API key
+# Fetch recent movies using the API key
 movies = fetch_recent_movies(API_KEY)
 
 if movies:
-    # User input for movie title
-    selected_movie = st.text_input('Enter a movie title you like:')
+    st.write("Here are the most recent movies from TMDb:")
     
+    # Display a list of fetched recent movies
+    for movie in movies:
+        st.write(f"- {movie['title']} (Release Date: {movie['release_date']})")
+    
+    # User input for movie title
+    selected_movie = st.text_input('Enter a movie title you like from the recent list:')
+
     # If user enters a movie title, find similar movies
     if selected_movie:
         # Compute cosine similarity matrix
-        cosine_sim_matrix = compute_cosine_similarity(movies)
+        cosine_sim_matrix, movie_df = compute_cosine_similarity(movies)
         
         # Get movie recommendations based on the input
-        recommended_movies = get_recommendations(selected_movie, movies, cosine_sim_matrix)
+        recommended_movies = get_recommendations(selected_movie, movie_df, cosine_sim_matrix)
         
         # Display the recommended movies
         if recommended_movies:
             st.write(f"Movies similar to '{selected_movie}':")
             for movie in recommended_movies:
-                st.write(f"- {movie}")
+                st.write(f"- {movie[0]} (Release Date: {movie[1]})")
         else:
             st.write("No recommendations found. Try another title.")
 else:
     st.write("No recent movies found.")
+
