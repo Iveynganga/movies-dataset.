@@ -2,8 +2,6 @@
 
 import streamlit as st
 import requests
-from sklearn.metrics.pairwise import cosine_similarity
-import pandas as pd
 
 # Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
@@ -28,7 +26,7 @@ def search_movie_by_title(api_key, title):
         st.error(f"Failed to search movie. Status code: {response.status_code}")
         return None
 
-# Function to fetch movie details using movie ID
+# Function to fetch similar movies using movie ID
 def fetch_movie_details(api_key, movie_id):
     base_url = f"https://api.themoviedb.org/3/movie/{movie_id}/similar"
     params = {
@@ -42,6 +40,12 @@ def fetch_movie_details(api_key, movie_id):
     else:
         st.error(f"Failed to fetch similar movies. Status code: {response.status_code}")
         return []
+
+# Function to fetch movie poster URL
+def fetch_poster_url(poster_path):
+    if poster_path:
+        return f"https://image.tmdb.org/t/p/w500{poster_path}"
+    return None
 
 # Streamlit app interface
 st.title("Movie Recommender System")
@@ -61,7 +65,21 @@ if selected_movie:
         
         if similar_movies:
             st.write(f"Movies similar to '{movie['title']}':")
-            for sim_movie in similar_movies:
-                st.write(f"- {sim_movie['title']} (Release Date: {sim_movie['release_date']})")
+            
+            # Show the first 5 similar movies with posters and ratings
+            for sim_movie in similar_movies[:5]:  # Limiting to the first 5 movies
+                poster_url = fetch_poster_url(sim_movie.get('poster_path'))
+                rating = sim_movie.get('vote_average', 'N/A')
+                release_date = sim_movie.get('release_date', 'N/A')
+                
+                st.write(f"**{sim_movie['title']}** (Release Date: {release_date})")
+                st.write(f"Rating: {rating}")
+                
+                if poster_url:
+                    st.image(poster_url)
+                else:
+                    st.write("No poster available.")
+                
+                st.write("---")  # Separator between movie recommendations
         else:
             st.write("No similar movies found.")
