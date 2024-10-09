@@ -8,9 +8,8 @@ import pandas as pd
 # Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
 
-# Function to fetch recent movies from TMDb API
-def fetch_recent_movies(api_key):
-    endpoint = "movie/now_playing"
+# Function to fetch movies from TMDb API (can be popular, top-rated, or similar)
+def fetch_movies(api_key, endpoint="movie/popular"):
     base_url = "https://api.themoviedb.org/3"
     
     # Parameters for the API request
@@ -64,24 +63,24 @@ def get_recommendations(title, movie_df, cosine_sim_matrix):
         similar_movies = movie_df.iloc[movie_indices][['title', 'release_date']].values.tolist()
         return similar_movies
     except IndexError:
-        st.error("Movie not found in the recent movies dataset!")
+        st.error("Movie not found in the dataset!")
         return []
 
 # Streamlit app interface
-st.title("Recent Movie Recommender System")
+st.title("Movie Recommender System")
 
-# Fetch recent movies using the API key
-movies = fetch_recent_movies(API_KEY)
+# Fetch movies using the API key (you can change to "movie/top_rated", etc. if needed)
+movies = fetch_movies(API_KEY, endpoint="movie/popular")
 
 if movies:
-    st.write("Here are the most recent movies from TMDb:")
+    st.write("Popular Movies from TMDb:")
     
-    # Display a list of fetched recent movies
+    # Display a list of fetched movies
     for movie in movies:
         st.write(f"- {movie['title']} (Release Date: {movie['release_date']})")
     
     # User input for movie title
-    selected_movie = st.text_input('Enter a movie title you like from the recent list:')
+    selected_movie = st.text_input('Enter a movie title you like:')
 
     # If user enters a movie title, find similar movies
     if selected_movie:
@@ -99,5 +98,4 @@ if movies:
         else:
             st.write("No recommendations found. Try another title.")
 else:
-    st.write("No recent movies found.")
-
+    st.write("No movies found.")
