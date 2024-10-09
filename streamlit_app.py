@@ -28,7 +28,7 @@ def search_movie_by_title(api_key, title):
         st.error(f"Failed to search movie. Status code: {response.status_code}")
         return None
 
-# Function to fetch movie details using movie ID
+# Function to fetch movie details using movie ID and return similar movies
 def fetch_movie_details(api_key, movie_id):
     base_url = f"https://api.themoviedb.org/3/movie/{movie_id}/similar"
     params = {
@@ -60,8 +60,14 @@ if selected_movie:
         similar_movies = fetch_movie_details(API_KEY, movie['id'])
         
         if similar_movies:
-            st.write(f"Movies similar to '{movie['title']}':")
-            for sim_movie in similar_movies:
+            # Sort similar movies by release date in descending order (most recent first)
+            sorted_similar_movies = sorted(similar_movies, key=lambda x: x['release_date'], reverse=True)
+            
+            # Get the top 10 most recent similar movies
+            top_10_recent_movies = sorted_similar_movies[:10]
+            
+            st.write(f"Top 10 most recent movies similar to '{movie['title']}':")
+            for sim_movie in top_10_recent_movies:
                 st.write(f"- {sim_movie['title']} (Release Date: {sim_movie['release_date']})")
         else:
             st.write("No similar movies found.")
