@@ -53,7 +53,7 @@ def filter_recent_movies(movies, years=10):
 # Streamlit app interface
 st.title("Movie Recommender System")
 
-# Catchy welcome note and explanation of cosine similarity
+# Welcome note and explanation of cosine similarity
 st.write("""
 Welcome to **Your Personalized Movie Recommender System**! 🎬 
 Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings and popularity. 
