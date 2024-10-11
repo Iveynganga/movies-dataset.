@@ -30,7 +30,7 @@ def search_movie_by_title(api_key, title):
         return None
 
 # Function to fetch similar movies using movie ID
-def fetch_movie_details(api_key, movie_id):
+def fetch_similar_movies(api_key, movie_id):
     base_url = f"https://api.themoviedb.org/3/movie/{movie_id}/similar"
     params = {
         "api_key": api_key,
@@ -69,20 +69,22 @@ if selected_movie:
     movie = search_movie_by_title(API_KEY, selected_movie)
     
     if movie:
-        st.write(f"Selected Movie: {movie['title']} (Release Date: {movie['release_date']})")
+        st.write(f"Selected Movie: **{movie['title']}** (Release Date: {movie['release_date']})")
         
         # Fetch similar movies using the movie ID
-        similar_movies = fetch_movie_details(API_KEY, movie['id'])
+        similar_movies = fetch_similar_movies(API_KEY, movie['id'])
         
         if similar_movies:
             # Filter to only keep recent movies (e.g., released in the last 2 years)
             recent_similar_movies = filter_recent_movies(similar_movies, years=2)
             
             if recent_similar_movies:
-                st.write(f"Recent movies similar to '{movie['title']}':")
-                cols = st.columns(5)  # Arrange posters in 5 columns horizontally
+                st.write(f"**Recent movies** similar to '{movie['title']}':")
                 
-                for i, sim_movie in enumerate(recent_similar_movies[:5]):
+                # Display in a horizontal layout using columns
+                cols = st.columns(min(len(recent_similar_movies), 5))  # Limit to max 5 columns
+
+                for i, sim_movie in enumerate(recent_similar_movies[:5]):  # Show the first 5 movies
                     with cols[i]:
                         # Check if the poster and vote_average exist before displaying
                         poster_path = sim_movie.get('poster_path', None)
@@ -95,6 +97,7 @@ if selected_movie:
                         
                         st.write(f"**{sim_movie['title']}**")
                         st.write(f"Rating: {vote_average}")
+                        st.write(f"Release Date: {sim_movie['release_date']}")
             else:
                 st.write("No recent similar movies found.")
         else:
