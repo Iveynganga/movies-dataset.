@@ -1,6 +1,5 @@
 
 
-
 import streamlit as st
 import requests
 from sklearn.metrics.pairwise import cosine_similarity
@@ -114,9 +113,9 @@ if st.button('Recommend'):
                     # Compute cosine similarity considering genre
                     cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
                     
-                    # Sort movies by similarity score and display the top 5
+                    # Sort movies by similarity score and display the top 10
                     top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
-                    cols = st.columns(5)
+                    cols = st.columns(10)
                     
                     for i, idx in enumerate(top_indices):
                         sim_movie = similar_movies[idx]
