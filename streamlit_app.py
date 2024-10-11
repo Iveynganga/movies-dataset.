@@ -1,5 +1,4 @@
 
-
 import streamlit as st
 import requests
 from sklearn.metrics.pairwise import cosine_similarity
@@ -106,28 +105,34 @@ if st.button('Recommend'):
                 similar_movies = fetch_similar_movies(API_KEY, movie['id'])
                 
                 if similar_movies:
-                    st.write(f"Movies similar to '{movie['title']}':")
+                    # Filter movies that are released from 2020 onwards
+                    recent_movies = [sim_movie for sim_movie in similar_movies if sim_movie['release_date'] >= "2020-01-01"]
                     
-                    # Compute cosine similarity considering genre
-                    cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
-                    
-                    # Sort movies by similarity score and display the top 5
-                    top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
-                    cols = st.columns(5)
-                    
-                    for i, idx in enumerate(top_indices):
-                        sim_movie = similar_movies[idx]
-                        with cols[i]:
-                            # Check if the poster exists before displaying
-                            poster_path = sim_movie.get('poster_path', None)
-                            
-                            if poster_path:
-                                st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
-                            else:
-                                st.write("No poster available")
-                            
-                            st.write(f"**{sim_movie['title']}**")
-                            st.write(f"Release Date: {sim_movie['release_date']}")
+                    if recent_movies:
+                        st.write(f"Movies similar to '{movie['title']}' (Released after 2020):")
+                        
+                        # Compute cosine similarity considering genre
+                        cosine_sim_matrix = compute_cosine_similarity_with_genre(recent_movies, selected_movie_genre_ids)
+                        
+                        # Sort movies by similarity score and display the top 5
+                        top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
+                        cols = st.columns(5)
+                        
+                        for i, idx in enumerate(top_indices):
+                            sim_movie = recent_movies[idx]
+                            with cols[i]:
+                                # Check if the poster exists before displaying
+                                poster_path = sim_movie.get('poster_path', None)
+                                
+                                if poster_path:
+                                    st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
+                                else:
+                                    st.write("No poster available")
+                                
+                                st.write(f"**{sim_movie['title']}**")
+                                st.write(f"Release Date: {sim_movie['release_date']}")
+                    else:
+                        st.write("No similar movies found released after 2020.")
                 else:
                     st.write("No similar movies found.")
     else:
