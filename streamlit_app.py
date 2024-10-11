@@ -2,6 +2,8 @@
 
 import streamlit as st
 import requests
+from sklearn.metrics.pairwise import cosine_similarity
+import pandas as pd
 
 # Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
@@ -26,7 +28,7 @@ def search_movie_by_title(api_key, title):
         st.error(f"Failed to search movie. Status code: {response.status_code}")
         return None
 
-# Function to fetch similar movies using movie ID
+# Function to fetch movie details using movie ID
 def fetch_movie_details(api_key, movie_id):
     base_url = f"https://api.themoviedb.org/3/movie/{movie_id}/similar"
     params = {
@@ -41,14 +43,31 @@ def fetch_movie_details(api_key, movie_id):
         st.error(f"Failed to fetch similar movies. Status code: {response.status_code}")
         return []
 
-# Function to fetch movie poster URL
-def fetch_poster_url(poster_path):
-    if poster_path:
-        return f"https://image.tmdb.org/t/p/w500{poster_path}"
-    return None
+# Function to fetch movie poster
+def fetch_poster(movie_id):
+    base_url = f"https://api.themoviedb.org/3/movie/{movie_id}"
+    params = {"api_key": API_KEY, "language": "en-US"}
+    response = requests.get(base_url, params=params)
+    if response.status_code == 200:
+        movie_data = response.json()
+        return f"https://image.tmdb.org/t/p/w500/{movie_data['poster_path']}"
+    else:
+        return None
 
 # Streamlit app interface
 st.title("Movie Recommender System")
+
+# Catchy welcome note and brief on cosine similarity
+st.markdown("""
+### Welcome to Your Personalized Movie Guide!
+Discover movies similar to your favorites using our recommendation system powered by **cosine similarity**. 
+Cosine similarity measures how alike two movies are based on features like ratings and popularity. 
+Just enter a movie title, and we'll find the top matching movies for you!
+""")
+
+# Adding a movie-related banner
+st.image("https://www.themoviedb.org/assets/2/v4/logos/primary-green-f91eaaee546b0244f56d90b9f0beee2c2c09da2f2d732b16b0187a7eb4cfa4b4.svg", 
+         use_column_width=True)
 
 # User input for movie title
 selected_movie = st.text_input('Enter a movie title you like:')
@@ -66,20 +85,11 @@ if selected_movie:
         if similar_movies:
             st.write(f"Movies similar to '{movie['title']}':")
             
-            # Show the first 5 similar movies with posters and ratings
-            for sim_movie in similar_movies[:5]:  # Limiting to the first 5 movies
-                poster_url = fetch_poster_url(sim_movie.get('poster_path'))
-                rating = sim_movie.get('vote_average', 'N/A')
-                release_date = sim_movie.get('release_date', 'N/A')
-                
-                st.write(f"**{sim_movie['title']}** (Release Date: {release_date})")
-                st.write(f"Rating: {rating}")
-                
-                if poster_url:
-                    st.image(poster_url)
-                else:
-                    st.write("No poster available.")
-                
-                st.write("---")  # Separator between movie recommendations
+            # Displaying posters and titles in a horizontal layout
+            cols = st.columns(5)  # Create 5 columns for horizontal display
+            for i, sim_movie in enumerate(similar_movies[:5]):  # Show only the first 5
+                with cols[i]:
+                    st.image(fetch_poster(sim_movie['id']), use_column_width=True)
+                    st.write(f"{sim_movie['title']} (Release: {sim_movie['release_date']})")
         else:
             st.write("No similar movies found.")
