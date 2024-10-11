@@ -48,14 +48,11 @@ st.title("Movie Recommender System")
 
 # Catchy welcome note and explanation of cosine similarity
 st.write("""
-Welcome to **Your Personalized Movie Recommender System**! 🎬 
+Welcome to the **Movie Recommender System**! 🎬 
 Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings and popularity. 
 
 Don't worry, it's just math doing the magic in the background 😉✨.
 """)
-
-# Movie banner
-st.image(banner_url, use_column_width=True)
 
 # User input for movie title
 selected_movie = st.text_input('Enter a movie title you like:')
