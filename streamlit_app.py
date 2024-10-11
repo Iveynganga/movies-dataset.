@@ -8,9 +8,6 @@ import pandas as pd
 # Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
 
-# New banner URL
-banner_url = "https://www.themoviedb.org/assets/2/v4/marketing/selfie-b69a3fa19f2dd32b365c57edee46a7ec9d041db8505e7ce1c92b2a5e92eb5ab0.png"
-
 # Function to search for a movie by title using TMDb API
 def search_movie_by_title(api_key, title):
     base_url = "https://api.themoviedb.org/3/search/movie"
