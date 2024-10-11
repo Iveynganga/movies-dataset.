@@ -43,7 +43,7 @@ def fetch_similar_movies(api_key, movie_id):
         st.error(f"Failed to fetch similar movies. Status code: {response.status_code}")
         return []
 
-# Function to fetch detailed movie info (including genres)
+# Function to fetch detailed movie info (including genres and production companies)
 def fetch_movie_details(api_key, movie_id):
     base_url = f"https://api.themoviedb.org/3/movie/{movie_id}"
     params = {
@@ -57,17 +57,25 @@ def fetch_movie_details(api_key, movie_id):
         st.error(f"Failed to fetch movie details. Status code: {response.status_code}")
         return None
 
-# Function to calculate cosine similarity considering genre
-def compute_cosine_similarity_with_genre(movies, movie_genres):
-    # Convert genres into one-hot encoding for cosine similarity
-    genre_df = pd.DataFrame(movies)
-    genre_df['genres'] = genre_df['genre_ids'].apply(lambda ids: [1 if genre_id in ids else 0 for genre_id in movie_genres])
+# Function to calculate cosine similarity considering genre and production company
+def compute_cosine_similarity_with_genre_and_company(movies, selected_movie_genre_ids, selected_movie_company_ids):
+    # Create a DataFrame for similar movies
+    similar_movies_df = pd.DataFrame(movies)
     
-    # Extract relevant features for similarity
-    features_df = pd.concat([genre_df['genres'].apply(pd.Series), genre_df[['vote_average', 'popularity', 'vote_count']]], axis=1)
+    # Extract genres and convert to dummy variables
+    similar_movies_df['genre_ids'] = similar_movies_df['genre_ids'].apply(lambda ids: [1 if genre_id in ids else 0 for genre_id in selected_movie_genre_ids])
+    genre_dummies = pd.get_dummies(similar_movies_df['genre_ids'].apply(pd.Series).stack()).sum(level=0)
+    
+    # Extract production companies and convert to dummy variables
+    similar_movies_df['production_companies'] = similar_movies_df['production_companies'].apply(lambda companies: [company['id'] for company in companies])
+    similar_movies_df['company_ids'] = similar_movies_df['production_companies'].apply(lambda ids: [1 if company_id in ids else 0 for company_id in selected_movie_company_ids])
+    company_dummies = pd.get_dummies(similar_movies_df['company_ids'].apply(pd.Series).stack()).sum(level=0)
+    
+    # Combine genre and company dummies with vote_average
+    movie_features = pd.concat([genre_dummies, company_dummies, similar_movies_df[['vote_average', 'popularity', 'vote_count']]], axis=1)
     
     # Compute cosine similarity matrix based on features
-    cosine_sim_matrix = cosine_similarity(features_df)
+    cosine_sim_matrix = cosine_similarity(movie_features)
     
     return cosine_sim_matrix
 
@@ -77,7 +85,7 @@ st.title("Movie Recommender System")
 # Welcome note and explanation of cosine similarity
 st.write("""
 Welcome to **Your Personalized Movie Recommender System**! 🎬 
-Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings, popularity, and genres.
+Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings, popularity, genres, and production companies.
 
 Don't worry, it's just math doing the magic in the background 😉✨.
 """)
@@ -93,7 +101,7 @@ if st.button('Recommend'):
         if movie:
             st.write(f"Selected Movie: **{movie['title']}**")
             
-            # Fetch detailed movie info (including genres)
+            # Fetch detailed movie info (including genres and production companies)
             movie_details = fetch_movie_details(API_KEY, movie['id'])
             
             if movie_details:
@@ -101,14 +109,18 @@ if st.button('Recommend'):
                 selected_movie_genres = movie_details.get('genres', [])
                 selected_movie_genre_ids = [genre['id'] for genre in selected_movie_genres]
                 
+                # Extract production company IDs from the selected movie
+                selected_movie_companies = movie_details.get('production_companies', [])
+                selected_movie_company_ids = [company['id'] for company in selected_movie_companies]
+                
                 # Fetch similar movies using the movie ID
                 similar_movies = fetch_similar_movies(API_KEY, movie['id'])
                 
                 if similar_movies:
                     st.write(f"Movies similar to '{movie['title']}':")
                     
-                    # Compute cosine similarity considering genre
-                    cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
+                    # Compute cosine similarity considering genre and production company
+                    cosine_sim_matrix = compute_cosine_similarity_with_genre_and_company(similar_movies, selected_movie_genre_ids, selected_movie_company_ids)
                     
                     # Sort movies by similarity score and display the top 5
                     top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
