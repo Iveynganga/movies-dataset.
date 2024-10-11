@@ -4,7 +4,6 @@ import streamlit as st
 import requests
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
-from datetime import datetime
 
 # Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
@@ -58,12 +57,6 @@ def fetch_movie_details(api_key, movie_id):
         st.error(f"Failed to fetch movie details. Status code: {response.status_code}")
         return None
 
-# Function to filter movies that are super recent (e.g., last 20 years)
-def filter_recent_movies(movies, years=20):
-    current_year = datetime.now().year
-    recent_movies = [movie for movie in movies if movie.get('release_date') and int(movie['release_date'][:4]) >= (current_year - years)]
-    return recent_movies
-
 # Function to calculate cosine similarity considering genre
 def compute_cosine_similarity_with_genre(movies, movie_genres):
     # Convert genres into one-hot encoding for cosine similarity
@@ -111,35 +104,29 @@ if selected_movie:
             similar_movies = fetch_similar_movies(API_KEY, movie['id'])
             
             if similar_movies:
-                # Filter to only keep recent movies (e.g., released in the last 10 years)
-                recent_similar_movies = filter_recent_movies(similar_movies, years=10)
+                st.write(f"Movies similar to '{movie['title']}':")
                 
-                if recent_similar_movies:
-                    st.write(f"**Recent movies** similar to '{movie['title']}':")
-                    
-                    # Compute cosine similarity considering genre
-                    cosine_sim_matrix = compute_cosine_similarity_with_genre(recent_similar_movies, selected_movie_genre_ids)
-                    
-                    # Sort movies by similarity score and display the top 5
-                    top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
-                    cols = st.columns(5)
-                    
-                    for i, idx in enumerate(top_indices):
-                        sim_movie = recent_similar_movies[idx]
-                        with cols[i]:
-                            # Check if the poster and vote_average exist before displaying
-                            poster_path = sim_movie.get('poster_path', None)
-                            vote_average = sim_movie.get('vote_average', 'N/A')
-                            
-                            if poster_path:
-                                st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
-                            else:
-                                st.write("No poster available")
-                            
-                            st.write(f"**{sim_movie['title']}**")
-                            st.write(f"Rating: {vote_average}")
-                            st.write(f"Release Date: {sim_movie['release_date']}")
-                else:
-                    st.write("No recent similar movies found.")
+                # Compute cosine similarity considering genre
+                cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
+                
+                # Sort movies by similarity score and display the top 5
+                top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
+                cols = st.columns(5)
+                
+                for i, idx in enumerate(top_indices):
+                    sim_movie = similar_movies[idx]
+                    with cols[i]:
+                        # Check if the poster and vote_average exist before displaying
+                        poster_path = sim_movie.get('poster_path', None)
+                        vote_average = sim_movie.get('vote_average', 'N/A')
+                        
+                        if poster_path:
+                            st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
+                        else:
+                            st.write("No poster available")
+                        
+                        st.write(f"**{sim_movie['title']}**")
+                        st.write(f"Rating: {vote_average}")
+                        st.write(f"Release Date: {sim_movie['release_date']}")
             else:
                 st.write("No similar movies found.")
