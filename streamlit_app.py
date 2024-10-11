@@ -48,7 +48,7 @@ st.title("Movie Recommender System")
 
 # Catchy welcome note and explanation of cosine similarity
 st.write("""
-Welcome to the **Movie Recommender System**! 🎬 
+Welcome to **Your Personalized Movie Recommender System**! 🎬 
 Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings and popularity. 
 
 Don't worry, it's just math doing the magic in the background 😉✨.
@@ -70,10 +70,19 @@ if selected_movie:
         if similar_movies:
             st.write(f"Movies similar to '{movie['title']}':")
             cols = st.columns(5)  # Arrange posters in 5 columns horizontally
+            
             for i, sim_movie in enumerate(similar_movies[:5]):
                 with cols[i]:
-                    st.image(f"https://image.tmdb.org/t/p/w500{sim_movie['poster_path']}")
+                    # Check if the poster and vote_average exist before displaying
+                    poster_path = sim_movie.get('poster_path', None)
+                    vote_average = sim_movie.get('vote_average', 'N/A')
+                    
+                    if poster_path:
+                        st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
+                    else:
+                        st.write("No poster available")
+                    
                     st.write(f"**{sim_movie['title']}**")
-                    st.write(f"Rating: {sim_movie['vote_average']}")
+                    st.write(f"Rating: {vote_average}")
         else:
             st.write("No similar movies found.")
