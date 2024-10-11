@@ -5,7 +5,7 @@ import requests
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
 
-# Your Tad API key
+# Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
 
 # Function to search for a movie by title using TMDb API
@@ -85,48 +85,50 @@ Don't worry, it's just math doing the magic in the background 😉✨.
 # User input for movie title
 selected_movie = st.text_input('Enter a movie title you like:')
 
-if selected_movie:
-    # Search for the movie using the title
-    movie = search_movie_by_title(API_KEY, selected_movie)
-    
-    if movie:
-        st.write(f"Selected Movie: **{movie['title']}** (Release Date: {movie['release_date']})")
+if st.button('Recommend'):
+    if selected_movie:
+        # Search for the movie using the title
+        movie = search_movie_by_title(API_KEY, selected_movie)
         
-        # Fetch detailed movie info (including genres)
-        movie_details = fetch_movie_details(API_KEY, movie['id'])
-        
-        if movie_details:
-            # Extract genre IDs from the selected movie
-            selected_movie_genres = movie_details.get('genres', [])
-            selected_movie_genre_ids = [genre['id'] for genre in selected_movie_genres]
+        if movie:
+            st.write(f"Selected Movie: **{movie['title']}**")
             
-            # Fetch similar movies using the movie ID
-            similar_movies = fetch_similar_movies(API_KEY, movie['id'])
+            # Fetch detailed movie info (including genres)
+            movie_details = fetch_movie_details(API_KEY, movie['id'])
             
-            if similar_movies:
-                st.write(f"Movies similar to '{movie['title']}':")
+            if movie_details:
+                # Extract genre IDs from the selected movie
+                selected_movie_genres = movie_details.get('genres', [])
+                selected_movie_genre_ids = [genre['id'] for genre in selected_movie_genres]
                 
-                # Compute cosine similarity considering genre
-                cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
+                # Fetch similar movies using the movie ID
+                similar_movies = fetch_similar_movies(API_KEY, movie['id'])
                 
-                # Sort movies by similarity score and display the top 5
-                top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
-                cols = st.columns(5)
-                
-                for i, idx in enumerate(top_indices):
-                    sim_movie = similar_movies[idx]
-                    with cols[i]:
-                        # Check if the poster and vote_average exist before displaying
-                        poster_path = sim_movie.get('poster_path', None)
-                        vote_average = sim_movie.get('vote_average', 'N/A')
-                        
-                        if poster_path:
-                            st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
-                        else:
-                            st.write("No poster available")
-                        
-                        st.write(f"**{sim_movie['title']}**")
-                        st.write(f"Rating: {vote_average}")
-                        st.write(f"Release Date: {sim_movie['release_date']}")
+                if similar_movies:
+                    st.write(f"Movies similar to '{movie['title']}':")
+                    
+                    # Compute cosine similarity considering genre
+                    cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
+                    
+                    # Sort movies by similarity score and display the top 5
+                    top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
+                    cols = st.columns(5)
+                    
+                    for i, idx in enumerate(top_indices):
+                        sim_movie = similar_movies[idx]
+                        with cols[i]:
+                            # Check if the poster exists before displaying
+                            poster_path = sim_movie.get('poster_path', None)
+                            
+                            if poster_path:
+                                st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
+                            else:
+                                st.write("No poster available")
+                            
+                            st.write(f"**{sim_movie['title']}**")
+                else:
+                    st.write("No similar movies found.")
             else:
-                st.write("No similar movies found.")
+                st.write("Failed to fetch movie details.")
+        else:
+            st.write("Movie not found.")
