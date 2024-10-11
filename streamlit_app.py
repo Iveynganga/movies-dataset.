@@ -64,12 +64,12 @@ def compute_cosine_similarity_with_genre_and_company(movies, selected_movie_genr
     
     # Extract genres and convert to dummy variables
     similar_movies_df['genre_ids'] = similar_movies_df['genre_ids'].apply(lambda ids: [1 if genre_id in ids else 0 for genre_id in selected_movie_genre_ids])
-    genre_dummies = pd.get_dummies(similar_movies_df['genre_ids'].apply(pd.Series).stack()).sum(level=0)
+    genre_dummies = pd.get_dummies(similar_movies_df['genre_ids'].apply(pd.Series).stack()).groupby(level=0).sum()
     
     # Extract production companies and convert to dummy variables
     similar_movies_df['production_companies'] = similar_movies_df['production_companies'].apply(lambda companies: [company['id'] for company in companies])
     similar_movies_df['company_ids'] = similar_movies_df['production_companies'].apply(lambda ids: [1 if company_id in ids else 0 for company_id in selected_movie_company_ids])
-    company_dummies = pd.get_dummies(similar_movies_df['company_ids'].apply(pd.Series).stack()).sum(level=0)
+    company_dummies = pd.get_dummies(similar_movies_df['company_ids'].apply(pd.Series).stack()).groupby(level=0).sum()
     
     # Combine genre and company dummies with vote_average
     movie_features = pd.concat([genre_dummies, company_dummies, similar_movies_df[['vote_average', 'popularity', 'vote_count']]], axis=1)
