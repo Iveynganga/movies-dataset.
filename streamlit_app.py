@@ -4,6 +4,7 @@ import streamlit as st
 import requests
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
+from datetime import datetime
 
 # Your TMDb API key
 API_KEY = "01d2a425252c60a07d9035e905a50397"
@@ -28,7 +29,7 @@ def search_movie_by_title(api_key, title):
         st.error(f"Failed to search movie. Status code: {response.status_code}")
         return None
 
-# Function to fetch movie details using movie ID
+# Function to fetch similar movies using movie ID
 def fetch_movie_details(api_key, movie_id):
     base_url = f"https://api.themoviedb.org/3/movie/{movie_id}/similar"
     params = {
@@ -42,6 +43,12 @@ def fetch_movie_details(api_key, movie_id):
     else:
         st.error(f"Failed to fetch similar movies. Status code: {response.status_code}")
         return []
+
+# Function to filter movies that are super recent (e.g., last 10 years)
+def filter_recent_movies(movies, years=10):
+    current_year = datetime.now().year
+    recent_movies = [movie for movie in movies if movie.get('release_date') and int(movie['release_date'][:4]) >= (current_year - years)]
+    return recent_movies
 
 # Streamlit app interface
 st.title("Movie Recommender System")
@@ -68,21 +75,27 @@ if selected_movie:
         similar_movies = fetch_movie_details(API_KEY, movie['id'])
         
         if similar_movies:
-            st.write(f"Movies similar to '{movie['title']}':")
-            cols = st.columns(5)  # Arrange posters in 5 columns horizontally
+            # Filter to only keep recent movies (e.g., released in the last 2 years)
+            recent_similar_movies = filter_recent_movies(similar_movies, years=2)
             
-            for i, sim_movie in enumerate(similar_movies[:5]):
-                with cols[i]:
-                    # Check if the poster and vote_average exist before displaying
-                    poster_path = sim_movie.get('poster_path', None)
-                    vote_average = sim_movie.get('vote_average', 'N/A')
-                    
-                    if poster_path:
-                        st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
-                    else:
-                        st.write("No poster available")
-                    
-                    st.write(f"**{sim_movie['title']}**")
-                    st.write(f"Rating: {vote_average}")
+            if recent_similar_movies:
+                st.write(f"Recent movies similar to '{movie['title']}':")
+                cols = st.columns(5)  # Arrange posters in 5 columns horizontally
+                
+                for i, sim_movie in enumerate(recent_similar_movies[:5]):
+                    with cols[i]:
+                        # Check if the poster and vote_average exist before displaying
+                        poster_path = sim_movie.get('poster_path', None)
+                        vote_average = sim_movie.get('vote_average', 'N/A')
+                        
+                        if poster_path:
+                            st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
+                        else:
+                            st.write("No poster available")
+                        
+                        st.write(f"**{sim_movie['title']}**")
+                        st.write(f"Rating: {vote_average}")
+            else:
+                st.write("No recent similar movies found.")
         else:
             st.write("No similar movies found.")
