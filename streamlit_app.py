@@ -58,8 +58,8 @@ def fetch_movie_details(api_key, movie_id):
         st.error(f"Failed to fetch movie details. Status code: {response.status_code}")
         return None
 
-# Function to filter movies that are super recent (e.g., last 10 years)
-def filter_recent_movies(movies, years=10):
+# Function to filter movies that are super recent (e.g., last 20 years)
+def filter_recent_movies(movies, years=20):
     current_year = datetime.now().year
     recent_movies = [movie for movie in movies if movie.get('release_date') and int(movie['release_date'][:4]) >= (current_year - years)]
     return recent_movies
