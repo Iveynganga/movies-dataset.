@@ -116,9 +116,8 @@ if selected_movie:
                 for i, idx in enumerate(top_indices):
                     sim_movie = similar_movies[idx]
                     with cols[i]:
-                        # Check if the poster and vote_average exist before displaying
+                        # Check if the poster exists before displaying
                         poster_path = sim_movie.get('poster_path', None)
-                        vote_average = sim_movie.get('vote_average', 'N/A')
                         
                         if poster_path:
                             st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
@@ -126,7 +125,6 @@ if selected_movie:
                             st.write("No poster available")
                         
                         st.write(f"**{sim_movie['title']}**")
-                        st.write(f"Rating: {vote_average}")
                         st.write(f"Release Date: {sim_movie['release_date']}")
             else:
                 st.write("No similar movies found.")
