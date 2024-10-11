@@ -83,7 +83,7 @@ st.title("Movie Recommender System")
 
 # Welcome note and explanation of cosine similarity
 st.write("""
-Welcome to the **Movie Recommender System**! 🎬 
+Welcome to **Your Personalized Movie Recommender System**! 🎬 
 Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings, popularity, and genres.
 
 Don't worry, it's just math doing the magic in the background 😉✨.
@@ -111,8 +111,8 @@ if selected_movie:
             similar_movies = fetch_similar_movies(API_KEY, movie['id'])
             
             if similar_movies:
-                # Filter to only keep recent movies (e.g., released in the last 2 years)
-                recent_similar_movies = filter_recent_movies(similar_movies, years=2)
+                # Filter to only keep recent movies (e.g., released in the last 10 years)
+                recent_similar_movies = filter_recent_movies(similar_movies, years=10)
                 
                 if recent_similar_movies:
                     st.write(f"**Recent movies** similar to '{movie['title']}':")
