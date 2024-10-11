@@ -58,28 +58,25 @@ def fetch_movie_details(api_key, movie_id):
         return None
 
 # Function to calculate cosine similarity considering genre
-def compute_cosine_similarity_with_genre(movies, selected_movie_genre_ids):
-    # Create a DataFrame for similar movies
-    similar_movies_df = pd.DataFrame(movies)
+def compute_cosine_similarity_with_genre(movies, movie_genres):
+    # Convert genres into one-hot encoding for cosine similarity
+    genre_df = pd.DataFrame(movies)
+    genre_df['genres'] = genre_df['genre_ids'].apply(lambda ids: [1 if genre_id in ids else 0 for genre_id in movie_genres])
     
-    # Extract genres and convert to dummy variables
-    similar_movies_df['genre_ids'] = similar_movies_df['genre_ids'].apply(lambda ids: [1 if genre_id in ids else 0 for genre_id in selected_movie_genre_ids])
-    genre_dummies = pd.get_dummies(similar_movies_df['genre_ids'].apply(pd.Series).stack()).groupby(level=0).sum()
-    
-    # Combine genre dummies with vote_average
-    movie_features = pd.concat([genre_dummies, similar_movies_df[['vote_average', 'popularity', 'vote_count']]], axis=1)
+    # Extract relevant features for similarity
+    features_df = pd.concat([genre_df['genres'].apply(pd.Series), genre_df[['vote_average', 'popularity', 'vote_count']]], axis=1)
     
     # Compute cosine similarity matrix based on features
-    cosine_sim_matrix = cosine_similarity(movie_features)
+    cosine_sim_matrix = cosine_similarity(features_df)
     
     return cosine_sim_matrix
 
 # Streamlit app interface
 st.title("Movie Recommender System")
 
-# Welcome note and explanation of cosine similarity
+# Catchy welcome note and explanation of cosine similarity
 st.write("""
-Welcome to **Your Personalized Movie Recommender System**! 🎬 
+Welcome to the **Movie Recommender System**! 🎬 
 Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings, popularity, and genres.
 
 Don't worry, it's just math doing the magic in the background 😉✨.
@@ -88,50 +85,48 @@ Don't worry, it's just math doing the magic in the background 😉✨.
 # User input for movie title
 selected_movie = st.text_input('Enter a movie title you like:')
 
-if st.button('Recommend'):
-    if selected_movie:
-        # Search for the movie using the title
-        movie = search_movie_by_title(API_KEY, selected_movie)
+if selected_movie:
+    # Search for the movie using the title
+    movie = search_movie_by_title(API_KEY, selected_movie)
+    
+    if movie:
+        st.write(f"Selected Movie: **{movie['title']}** (Release Date: {movie['release_date']})")
         
-        if movie:
-            st.write(f"Selected Movie: **{movie['title']}**")
+        # Fetch detailed movie info (including genres)
+        movie_details = fetch_movie_details(API_KEY, movie['id'])
+        
+        if movie_details:
+            # Extract genre IDs from the selected movie
+            selected_movie_genres = movie_details.get('genres', [])
+            selected_movie_genre_ids = [genre['id'] for genre in selected_movie_genres]
             
-            # Fetch detailed movie info (including genres)
-            movie_details = fetch_movie_details(API_KEY, movie['id'])
+            # Fetch similar movies using the movie ID
+            similar_movies = fetch_similar_movies(API_KEY, movie['id'])
             
-            if movie_details:
-                # Extract genre IDs from the selected movie
-                selected_movie_genres = movie_details.get('genres', [])
-                selected_movie_genre_ids = [genre['id'] for genre in selected_movie_genres]
+            if similar_movies:
+                st.write(f"Movies similar to '{movie['title']}':")
                 
-                # Fetch similar movies using the movie ID
-                similar_movies = fetch_similar_movies(API_KEY, movie['id'])
+                # Compute cosine similarity considering genre
+                cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
                 
-                if similar_movies:
-                    st.write(f"Movies similar to '{movie['title']}':")
-                    
-                    # Compute cosine similarity considering genre
-                    cosine_sim_matrix = compute_cosine_similarity_with_genre(similar_movies, selected_movie_genre_ids)
-                    
-                    # Sort movies by similarity score and display the top 10
-                    top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
-                    cols = st.columns(10)
-                    
-                    for i, idx in enumerate(top_indices):
-                        sim_movie = similar_movies[idx]
-                        with cols[i]:
-                            # Check if the poster exists before displaying
-                            poster_path = sim_movie.get('poster_path', None)
-                            
-                            if poster_path:
-                                st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
-                            else:
-                                st.write("No poster available")
-                            
-                            st.write(f"**{sim_movie['title']}**")
-                else:
-                    st.write("No similar movies found.")
+                # Sort movies by similarity score and display the top 5
+                top_indices = cosine_sim_matrix[0].argsort()[::-1][1:6]
+                cols = st.columns(5)
+                
+                for i, idx in enumerate(top_indices):
+                    sim_movie = similar_movies[idx]
+                    with cols[i]:
+                        # Check if the poster and vote_average exist before displaying
+                        poster_path = sim_movie.get('poster_path', None)
+                        vote_average = sim_movie.get('vote_average', 'N/A')
+                        
+                        if poster_path:
+                            st.image(f"https://image.tmdb.org/t/p/w500{poster_path}")
+                        else:
+                            st.write("No poster available")
+                        
+                        st.write(f"**{sim_movie['title']}**")
+                        st.write(f"Rating: {vote_average}")
+                        st.write(f"Release Date: {sim_movie['release_date']}")
             else:
-                st.write("Failed to fetch movie details.")
-        else:
-            st.write("Movie not found.")
+                st.write("No similar movies found.")
