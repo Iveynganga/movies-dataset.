@@ -74,7 +74,7 @@ def compute_cosine_similarity_with_genre(movies, movie_genres):
 # Streamlit app interface
 st.title("Movie Recommender System")
 
-# Catchy welcome note and explanation of cosine similarity
+# Welcome note and explanation of cosine similarity
 st.write("""
 Welcome to the **Movie Recommender System**! 🎬 
 Here, you’ll get movie suggestions using *cosine similarity*, a technique that helps us find movies similar to the one you love by measuring how 'close' they are in terms of features like ratings, popularity, and genres.
